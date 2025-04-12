@@ -17,6 +17,7 @@ const Container = styled.div`
   gap: 0.5rem;
   align-items: stretch;
   justify-content: center;
+  overflow: hidden;
 `
 const Box = styled.div`
   background: ${props => colors[props.itemId]};
@@ -44,22 +45,37 @@ const SCALE_UP_FACTOR = [
   [-1, -1],
 ];
 
-const VIEW_OUT_FACTOR = {
-  left: [-1, 0],
-  right: [1, 0],
+const MOVE_OUT_FACTOR = {
+  leftDown: [-1, 0.5],
+  rightDown: [1, 0.5],
   up: [0, -1],
   down: [0, 1],
-  upLeft: [-1, -1],
-  upRight: [1, -1],
-  downLeft: [-1, 1],
-  downRight: [1, 1],
+  leftUp: [-1, -0.5],
+  rightUp: [1, -0.5],
 }
 
-const VIEW_IN_FACTOR = {
-  left: [1, 0],
-  up: [0, 1],
-  down: [0, -1],
-  right: [-1, 0],
+const getMoveDirection = (topActive, leftActive, top, left) => {
+  if(topActive === top && leftActive < left){
+    if(topActive === 0){
+      return 'rightDown'
+    } else {
+      return 'rightUp'
+    }
+  }
+  if(topActive === top && leftActive > left){
+    if(topActive === 0){
+      return 'leftDown'
+    } else {
+      return 'leftUp'
+    }
+  }
+  if(topActive < top ){
+    return 'down'
+  }
+  if(topActive > top ){
+    return 'up'
+  }
+  return null
 }
 
 export default React.memo(function FourByFour() {
@@ -137,34 +153,6 @@ export default React.memo(function FourByFour() {
   }
 
   useGSAP(() => {
-    if(activeId == null) {
-      return;
-    }
-    const target = boxRefs.current[activeId];
-    const targetRect = target.getBoundingClientRect();
-    const {top, bottom, left, right} = targetRect;
-    console.log('top, bottom, left, right', top, bottom, left, right)
-    const style = getComputedStyle(target)
-    console.log(`id=${target.id}, order=${style.order}`)
-    const translateFactor = SCALE_UP_FACTOR[style.order]
-    gsap.to(target, {scale: 2, x: `${translateFactor[0]*50}%`, y:`${translateFactor[1]*50}%`, duration: 0.5})
-    const otherBoxes = boxRefs.current.filter(box => box.id !== activeId)
-    console.log('otherBoxes:', otherBoxes)
-    const orderActive = style.order;
-    otherBoxes.forEach(box => {
-      const styleOther = getComputedStyle(box)
-      const {order} = styleOther;
-      const diff = orderActive - order;
-      if(order == 0){
-      }
-      // const translateFactor = VIEW_OUT_FACTOR[style.order]
-      // gsap.to(box, {scale: 0.5, x: `${translateFactor[0]*50}%`, y:`${translateFactor[1]*50}%`, duration: 0.5})
-    })
-
-
-  }, {scope: topRef.current, dependencies:[activeId], revertOnUpdate: true})
-
-  useGSAP(() => {
     if(lastClickTime === null){
       return
     }
@@ -214,6 +202,50 @@ export default React.memo(function FourByFour() {
   // const onClickBox = contextSafe(() => {
   // }, [])
 
+
+  const ease = 'power2.out'
+  // const ease = 'bounce.out'
+  // const ease = 'bounce.inOut'
+  // const ease = 'elastic.out'
+  // const ease = 'elastic.inOut'
+  // const ease = 'expo.out'
+  // const ease = 'steps'
+  const gsapScaleUp = contextSafe((id) => {
+    const target = boxRefs.current[id];
+    const targetRect = target.getBoundingClientRect();
+    const {top: topActive, left: leftActive} = targetRect;
+    const style = getComputedStyle(target)
+    console.log(`id=${target.id}, order=${style.order}`)
+    const translateFactor = SCALE_UP_FACTOR[style.order]
+    gsap.to(target, {
+      scale: 2.0, 
+      x: `${translateFactor[0]*50}%`, 
+      y:`${translateFactor[1]*50}%`, 
+      duration: 0.5,
+      ease
+    })
+    const otherBoxes = boxRefs.current.filter(box => box.id !== id)
+    otherBoxes.forEach(box => {
+      const boxRect = box.getBoundingClientRect();
+      const {top, left} = boxRect
+      const moveDirection = getMoveDirection(topActive, leftActive, top, left)
+      if(moveDirection === null){
+        alert('no way to move')
+      }
+      const moveOutFactor = MOVE_OUT_FACTOR[moveDirection];
+      const scaleY = moveDirection !== 'up' && moveDirection !== 'down' ? 2 : 1;
+      console.log(box, topActive, leftActive, top, left, moveDirection, moveOutFactor, scaleY)
+      gsap.to(box, {
+        x: `${moveOutFactor[0]*100}%`, 
+        y:`${moveOutFactor[1]*100}%`, 
+        scaleY, 
+        opacity: 0.5, 
+        duration: 0.5,
+        ease
+      })
+    })
+  })
+
   const gsapScaleDown = contextSafe((id) => {
     const target = boxRefs.current[id]
     console.log(target)
@@ -222,9 +254,21 @@ export default React.memo(function FourByFour() {
       x: '0', 
       y:'0', 
       duration: 0.5,
+      ease,
       onComplete: () => {
-        setLastClickTime(Date.now())
+        // setLastClickTime(Date.now())
       }
+    })
+    const otherBoxes = boxRefs.current.filter(box => box.id !== id)
+    otherBoxes.forEach(box => {
+      gsap.to(box, {
+        x: `0%`, 
+        y:`0%`, 
+        scale: 1, 
+        opacity: 1, 
+        duration: 0.5,
+        ease
+      })
     })
   })
 
@@ -237,7 +281,7 @@ export default React.memo(function FourByFour() {
     const {id} = event.target;
     console.log('click:', id);
     event.target.parentNode.style.zIndex = zIndexRef.current + 1;
-    setActiveId(id)
+    gsapScaleUp(id)
   }, [zIndexRef])
 
   const scaleDown = React.useCallback((event) => {
