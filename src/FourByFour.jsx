@@ -31,6 +31,8 @@ const Box = styled.div`
 
 const data = ['1층', '2층', '3층', '4층']
 const colors = ['black', 'grey', 'blue', 'maroon']
+const AUTO_ROTATE = true;
+const INITIAL_Z_INDEX = [0, 3, 1, 2]
 const NEXT_INDEX_MAP = {
   0: 1,
   1: 3,
@@ -87,7 +89,7 @@ export default React.memo(function FourByFour() {
   const [lastButtonClickTime, setLastButtonClickTime] = React.useState(null);
 
   const [flipState, setFlipState] = React.useState(null);
-  const zIndexRef = React.useState(0);
+  const zIndexRef = React.useRef(3);
 
   const activeOrderNumber = React.useMemo(() => {
     if(activeId === null){
@@ -144,11 +146,14 @@ export default React.memo(function FourByFour() {
       // activeId 이후의 순서를 계산하기 위해 인덱스 조정
       inputIndex = (inputIndex - activeIndex + order.length) % order.length;
       console.log('########## should', shouldStartFirstIndex, cssStyle.order, activeIndex, inputIndex)
-      
-      const weights = [0, 0.1, 0.25, 0.4];
+      // const weights = [0, 0.1, 0.25, 0.4];
+      // const weights = [0, 0.4/3, 0.2, 0.4];
+      // const weights = [0, 3, 6, 9];
+      const weights = [0, 0.2, 0.4, 0.6];
       // activeId와 일치하지 않는 경우, 순서에 따라 0.1씩 증가
       console.log('duraion:', inputIndex*0.3)
       return weights[inputIndex] ;
+      // return 
     }
   }
 
@@ -169,13 +174,16 @@ export default React.memo(function FourByFour() {
     })
     const masterTimeline = gsap.timeline();
     const flipTimeline = Flip.from(state, {
-      duration: 0.5,
+      // duration: 0.4,
+      duration: 0.2,
       // stagger: {
       //   from: activeId,
       //   amount : 1
       // },
       stagger: makeStagger(activeOrderNumber),
       absolute: true,
+      fade: true,
+      ease: 'power1.out',
       onComplete: () => {
         setActiveId(null)
         setFlipState(Flip.getState(boxRefs.current, {props: "order"}))
@@ -256,7 +264,9 @@ export default React.memo(function FourByFour() {
       duration: 0.5,
       ease,
       onComplete: () => {
-        // setLastClickTime(Date.now())
+        if(AUTO_ROTATE){
+          setLastClickTime(Date.now())
+        }
       }
     })
     const otherBoxes = boxRefs.current.filter(box => box.id !== id)
@@ -272,17 +282,15 @@ export default React.memo(function FourByFour() {
     })
   })
 
-  const onClickBox = React.useCallback(() => {
-    setLastClickTime(Date.now())
-  }, [])
-
   const scaleUp = React.useCallback((event) => {
     event.stopPropagation();
     const {id} = event.target;
     console.log('click:', id);
     event.target.parentNode.style.zIndex = zIndexRef.current + 1;
+    zIndexRef.current += 1;
     gsapScaleUp(id)
-  }, [zIndexRef])
+    setActiveId(id)
+  }, [gsapScaleUp, zIndexRef])
 
   const scaleDown = React.useCallback((event) => {
     event.stopPropagation();
@@ -296,11 +304,12 @@ export default React.memo(function FourByFour() {
     >
       {data.map((stage, i) => (
         <Box
-          onClick={onClickBox}
+          // onClick={onClickBox}
           key={i}
           id={i}
           itemId={i}
           ref={el => boxRefs.current[i] = el}
+          zIndex={INITIAL_Z_INDEX[i]}
         >{stage}{boxRefs.current[i]?.style.order}
           <button id={i} onClick={scaleUp}>scaleup</button>
           <button id={i} onClick={scaleDown}>scaledown</button>
