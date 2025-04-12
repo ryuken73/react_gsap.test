@@ -37,30 +37,13 @@ const NEXT_INDEX_MAP = {
   2: 0
 }
 
-const SCALE_UP_FACTOR = [
+const TRANSLATE_FACTOR = [
   [1, 1],
   [-1, 1],
   [1, -1],
   [-1, -1],
 ];
 
-const VIEW_OUT_FACTOR = {
-  left: [-1, 0],
-  right: [1, 0],
-  up: [0, -1],
-  down: [0, 1],
-  upLeft: [-1, -1],
-  upRight: [1, -1],
-  downLeft: [-1, 1],
-  downRight: [1, 1],
-}
-
-const VIEW_IN_FACTOR = {
-  left: [1, 0],
-  up: [0, 1],
-  down: [0, -1],
-  right: [-1, 0],
-}
 
 export default React.memo(function FourByFour() {
   const topRef = React.useRef(null);
@@ -140,34 +123,63 @@ export default React.memo(function FourByFour() {
     if(activeId == null) {
       return;
     }
-    const target = boxRefs.current[activeId];
-    const targetRect = target.getBoundingClientRect();
-    const {top, bottom, left, right} = targetRect;
-    console.log('top, bottom, left, right', top, bottom, left, right)
+    const target = boxRefs.current[activeId]
     const style = getComputedStyle(target)
     console.log(`id=${target.id}, order=${style.order}`)
-    const translateFactor = SCALE_UP_FACTOR[style.order]
+    const translateFactor = TRANSLATE_FACTOR[style.order]
     gsap.to(target, {scale: 2, x: `${translateFactor[0]*50}%`, y:`${translateFactor[1]*50}%`, duration: 0.5})
-    const otherBoxes = boxRefs.current.filter(box => box.id !== activeId)
-    console.log('otherBoxes:', otherBoxes)
-    const orderActive = style.order;
-    otherBoxes.forEach(box => {
-      const styleOther = getComputedStyle(box)
-      const {order} = styleOther;
-      const diff = orderActive - order;
-      if(order == 0){
-      }
-      // const translateFactor = VIEW_OUT_FACTOR[style.order]
-      // gsap.to(box, {scale: 0.5, x: `${translateFactor[0]*50}%`, y:`${translateFactor[1]*50}%`, duration: 0.5})
-    })
-
 
   }, {scope: topRef.current, dependencies:[activeId], revertOnUpdate: true})
 
   useGSAP(() => {
+    // 1개 box control
+    // const target = boxRefs.current[0]
+    // gsap.to(target, {x: 200})
+    // gsap.to(target, {width: '50%', height: '50%'})
+    // gsap.to(target, {translateZ: '50px' , height: '50%'})
+
+    // 전체 box 움직이기
+    // const target = boxRefs.current;
+    // gsap.to(allTargets.current, {x: 200})
+    // gsap.to(target, {width: '50%', height: '50%'})
+
+    // state 연동, 클릭 시 target에 animation
+
+    // gsap.to(target, {scale: '2' , rotate: 360 })
+    // gsap.to(target, {backgroundColor: 'maroon' , rotate: 360 })
+
+    // 클릭 시 해당 box를 다음 박스로 이동
     if(lastClickTime === null){
       return
     }
+    // const from = boxRefs.current[activeId];
+    // const nextIndex = parseInt(activeId) + 1 === boxRefs.current.length ? 0:parseInt(activeId) + 1;
+    // const to = boxRefs.current[nextIndex]
+
+    // Flip.fit(from, to, {
+    //   duration: 1,
+    //   ease: 'poweri.inOut',
+    //   scale: true
+    // })
+
+    // 클릭 시 모든 box를 다음 box로 이동 (using Flip.fit)
+    // 두번째 누르면 잘 안됨. 왜냐하면 boxRefs.current가 re-render되어서 예전과 동일하기 때문
+    // boxRefs.current.forEach((box, i) => {
+    //   // const nextIndex = parseInt(i) + 1 === boxRefs.current.length ? 0:parseInt(i) + 1;
+    //   console.log(i, box.id)
+    //   const nextIndex = getNextIndex(i)
+    //   const to = boxRefs.current[nextIndex]
+    //   Flip.fit(box, to, {
+    //     duration: 1,
+    //     ease: 'poweri.inOut',
+    //     scale: true
+    //   })
+    // })
+    // console.log(boxRefs.current)
+    // // boxRefs.current = reorderBoxRef(boxRefs.current)
+    // boxRefs.current = []
+    // console.log(boxRefs.current)
+
     // Flip.from으로 해보자.
     boxRefs.current.forEach(box => {
       console.log('before', box.id, window.getComputedStyle(box).order)
@@ -224,6 +236,24 @@ export default React.memo(function FourByFour() {
       duration: 0.5,
       onComplete: () => {
         setLastClickTime(Date.now())
+        // boxRefs.current.forEach(box => {
+        //   console.log('before', box.id, window.getComputedStyle(box).order)
+        //   console.log(flipState)
+        // })
+        // const state = flipState === null ? Flip.getState(boxRefs.current, {props: "order"}) : flipState;
+        // boxRefs.current.forEach((box, i) => {
+        //   const nextOrder = getNextOrder(box)
+        //   box.style.order = nextOrder
+        // })
+        // Flip.from(state, {
+        //   duration: 0.3,
+        //   stagger: 0.1,
+        //   absolute: true,
+        //   onComplete: () => {
+        //     console.log(boxRefs.current)
+        //     setFlipState(Flip.getState(boxRefs.current, {props: "order"}))
+        //   }
+        // })
       }
     })
   })
@@ -257,7 +287,7 @@ export default React.memo(function FourByFour() {
           id={i}
           itemId={i}
           ref={el => boxRefs.current[i] = el}
-        >{stage}{boxRefs.current[i]?.style.order}
+        >{stage}
           <button id={i} onClick={scaleUp}>scaleup</button>
           <button id={i} onClick={scaleDown}>scaledown</button>
         </Box>
