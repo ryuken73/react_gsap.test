@@ -18,6 +18,7 @@ const Container = styled.div`
   align-items: stretch;
   justify-content: center;
   overflow: hidden;
+  background: magenta;
 `
 const Box = styled.div`
   background: ${props => colors[props.itemId]};
@@ -30,7 +31,7 @@ const Box = styled.div`
 `
 
 const data = ['1층', '2층', '3층', '4층']
-const colors = ['black', 'grey', 'blue', 'maroon']
+const colors = ['cyan', 'grey', 'blue', 'maroon']
 const AUTO_ROTATE = true;
 const INITIAL_Z_INDEX = [0, 3, 1, 2]
 const NEXT_INDEX_MAP = {
@@ -149,11 +150,13 @@ export default React.memo(function FourByFour() {
       // const weights = [0, 0.1, 0.25, 0.4];
       // const weights = [0, 0.4/3, 0.2, 0.4];
       // const weights = [0, 3, 6, 9];
-      const weights = [0, 0.2, 0.4, 0.6];
+      // const weights = [0, 0.2, 0.4, 0.6];
+      const weights = [0, 0.1, 0.2, 0.3];
+      // const weights = [0, 0.4, 0, 0.4];
       // activeId와 일치하지 않는 경우, 순서에 따라 0.1씩 증가
       console.log('duraion:', inputIndex*0.3)
       return weights[inputIndex] ;
-      // return 
+      // return  0
     }
   }
 
@@ -174,8 +177,9 @@ export default React.memo(function FourByFour() {
     })
     const masterTimeline = gsap.timeline();
     const flipTimeline = Flip.from(state, {
-      // duration: 0.4,
-      duration: 0.2,
+      duration: 0.5,
+      // duration: 1,
+      // spin: true,
       // stagger: {
       //   from: activeId,
       //   amount : 1
@@ -183,7 +187,9 @@ export default React.memo(function FourByFour() {
       stagger: makeStagger(activeOrderNumber),
       absolute: true,
       fade: true,
-      ease: 'power1.out',
+      // ease: 'power1.out',
+      ease: 'elastic.out(1, 0.9)',
+      onEnter: elements => gsap.fromTo(elements, {opacity: 1}, {opacity: 0.5}),
       onComplete: () => {
         setActiveId(null)
         setFlipState(Flip.getState(boxRefs.current, {props: "order"}))
@@ -226,7 +232,7 @@ export default React.memo(function FourByFour() {
     console.log(`id=${target.id}, order=${style.order}`)
     const translateFactor = SCALE_UP_FACTOR[style.order]
     gsap.to(target, {
-      scale: 2.0, 
+      scale: 2, 
       x: `${translateFactor[0]*50}%`, 
       y:`${translateFactor[1]*50}%`, 
       duration: 0.5,
@@ -247,7 +253,7 @@ export default React.memo(function FourByFour() {
         x: `${moveOutFactor[0]*100}%`, 
         y:`${moveOutFactor[1]*100}%`, 
         scaleY, 
-        opacity: 0.5, 
+        opacity: 0, 
         duration: 0.5,
         ease
       })
@@ -257,7 +263,7 @@ export default React.memo(function FourByFour() {
   const gsapScaleDown = contextSafe((id) => {
     const target = boxRefs.current[id]
     console.log(target)
-    gsap.to(target, {
+    gsap.to(boxRefs.current, {
       scale: 1, 
       x: '0', 
       y:'0', 
